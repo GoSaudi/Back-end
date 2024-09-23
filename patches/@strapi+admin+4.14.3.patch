@@ -1,0 +1,285 @@
+diff --git a/node_modules/@strapi/admin/admin/.DS_Store b/node_modules/@strapi/admin/admin/.DS_Store
+new file mode 100644
+index 0000000..5172429
+Binary files /dev/null and b/node_modules/@strapi/admin/admin/.DS_Store differ
+diff --git a/node_modules/@strapi/admin/admin/src/.DS_Store b/node_modules/@strapi/admin/admin/src/.DS_Store
+new file mode 100644
+index 0000000..43c1268
+Binary files /dev/null and b/node_modules/@strapi/admin/admin/src/.DS_Store differ
+diff --git a/node_modules/@strapi/admin/admin/src/components/LeftMenu/index.js b/node_modules/@strapi/admin/admin/src/components/LeftMenu/index.js
+index c259beb..7c4a83e 100644
+--- a/node_modules/@strapi/admin/admin/src/components/LeftMenu/index.js
++++ b/node_modules/@strapi/admin/admin/src/components/LeftMenu/index.js
+@@ -1,4 +1,4 @@
+-import React, { useRef, useState } from 'react';
++import React, { useEffect, useRef, useState } from 'react';
+ 
+ import { Box, Divider, Flex, FocusTrap, Typography } from '@strapi/design-system';
+ import {
+@@ -17,6 +17,7 @@ import {
+   useAppInfo,
+   usePersistentState,
+   useTracking,
++  useFetchClient
+ } from '@strapi/helper-plugin';
+ import { Exit, Write } from '@strapi/icons';
+ import PropTypes from 'prop-types';
+@@ -25,6 +26,8 @@ import { NavLink as RouterNavLink, useHistory, useLocation } from 'react-router-
+ import styled from 'styled-components';
+ 
+ import { useConfigurations } from '../../hooks';
++import { useQuery } from 'react-query';
++
+ 
+ const LinkUserWrapper = styled(Box)`
+   width: ${150 / 16}rem;
+@@ -43,7 +46,7 @@ const LinkUser = styled(RouterNavLink)`
+ 
+   &:hover {
+     background: ${({ theme, logout }) =>
+-      logout ? theme.colors.danger100 : theme.colors.primary100};
++    logout ? theme.colors.danger100 : theme.colors.primary100};
+     text-decoration: none;
+   }
+ 
+@@ -67,6 +70,7 @@ const LeftMenu = ({ generalSectionLinks, pluginsSectionLinks }) => {
+   const { pathname } = useLocation();
+   const history = useHistory();
+   const { post } = getFetchClient();
++  const { get } = useFetchClient();
+ 
+   const initials = userDisplayName
+     .split(' ')
+@@ -101,6 +105,18 @@ const LeftMenu = ({ generalSectionLinks, pluginsSectionLinks }) => {
+     defaultMessage: 'Strapi Dashboard',
+   });
+ 
++  const { data: isSiteAdmin } = useQuery(
++    'user2',
++    async () => {
++      const { data } = await get('/admin/users/me');
++      const roles = data?.data?.roles;
++      if(roles?.length) {
++        const siteAdmin = roles.find(role => role.name === "site-admin")
++        return !!siteAdmin
++      }
++    }
++  );
++
+   return (
+     <MainNav condensed={condensed}>
+       <NavBrand
+@@ -121,7 +137,6 @@ const LeftMenu = ({ generalSectionLinks, pluginsSectionLinks }) => {
+         }
+       />
+ 
+-      <Divider />
+ 
+       <NavSections>
+         <NavLink
+@@ -133,33 +148,30 @@ const LeftMenu = ({ generalSectionLinks, pluginsSectionLinks }) => {
+           {formatMessage({ id: 'global.content-manager', defaultMessage: 'Content manager' })}
+         </NavLink>
+ 
+-        {pluginsSectionLinks.length > 0 ? (
+-          <NavSection
+-            label={formatMessage({
+-              id: 'app.components.LeftMenu.plugins',
+-              defaultMessage: 'Plugins',
+-            })}
+-          >
+-            {pluginsSectionLinks.map((link) => {
+-              const Icon = link.icon;
++        {pluginsSectionLinks.length && pluginsSectionLinks.map((link) => {
++          const Icon = link.icon;
++
++          return (
++            <NavLink
++              isActive={(match, location) => {
++                if (!match) return false
++
++                return match.url == location.pathname
++              }}
++              as={RouterNavLink}
++              to={link.to}
++              key={link.to}
++              icon={<Icon />}
++              onClick={() => handleClickOnLink(link.to)}
++            >
++              {formatMessage(link.intlLabel)}
++            </NavLink>
++          );
++        })}
+ 
+-              return (
+-                <NavLink
+-                  as={RouterNavLink}
+-                  to={link.to}
+-                  key={link.to}
+-                  icon={<Icon />}
+-                  onClick={() => handleClickOnLink(link.to)}
+-                >
+-                  {formatMessage(link.intlLabel)}
+-                </NavLink>
+-              );
+-            })}
+-          </NavSection>
+-        ) : null}
+ 
+         {generalSectionLinks.length > 0 ? (
+-          <NavSection
++          <>{!isSiteAdmin && <NavSection
+             label={formatMessage({
+               id: 'app.components.LeftMenu.general',
+               defaultMessage: 'General',
+@@ -170,6 +182,7 @@ const LeftMenu = ({ generalSectionLinks, pluginsSectionLinks }) => {
+ 
+               return (
+                 <NavLink
++
+                   as={RouterNavLink}
+                   badgeContent={
+                     (link.notificationsCount > 0 && link.notificationsCount.toString()) || undefined
+@@ -183,7 +196,7 @@ const LeftMenu = ({ generalSectionLinks, pluginsSectionLinks }) => {
+                 </NavLink>
+               );
+             })}
+-          </NavSection>
++          </NavSection>}</>
+         ) : null}
+       </NavSections>
+ 
+@@ -231,13 +244,13 @@ const LeftMenu = ({ generalSectionLinks, pluginsSectionLinks }) => {
+         <NavCondense onClick={() => setCondensed((s) => !s)}>
+           {condensed
+             ? formatMessage({
+-                id: 'app.components.LeftMenu.expand',
+-                defaultMessage: 'Expand the navbar',
+-              })
++              id: 'app.components.LeftMenu.expand',
++              defaultMessage: 'Expand the navbar',
++            })
+             : formatMessage({
+-                id: 'app.components.LeftMenu.collapse',
+-                defaultMessage: 'Collapse the navbar',
+-              })}
++              id: 'app.components.LeftMenu.collapse',
++              defaultMessage: 'Collapse the navbar',
++            })}
+         </NavCondense>
+       </NavFooter>
+     </MainNav>
+diff --git a/node_modules/@strapi/admin/admin/src/pages/.DS_Store b/node_modules/@strapi/admin/admin/src/pages/.DS_Store
+new file mode 100644
+index 0000000..973bd44
+Binary files /dev/null and b/node_modules/@strapi/admin/admin/src/pages/.DS_Store differ
+diff --git a/node_modules/@strapi/admin/admin/src/pages/HomePage/index.js b/node_modules/@strapi/admin/admin/src/pages/HomePage/index.js
+index a22f746..f60ede8 100644
+--- a/node_modules/@strapi/admin/admin/src/pages/HomePage/index.js
++++ b/node_modules/@strapi/admin/admin/src/pages/HomePage/index.js
+@@ -9,7 +9,7 @@ import { Box, Grid, GridItem, Layout, Main } from '@strapi/design-system';
+ import { LoadingIndicatorPage, useGuidedTour } from '@strapi/helper-plugin';
+ import { Helmet } from 'react-helmet';
+ import { FormattedMessage } from 'react-intl';
+-import { useHistory } from 'react-router-dom';
++import { useHistory, Redirect } from 'react-router-dom';
+ import styled from 'styled-components';
+ 
+ import GuidedTourHomepage from '../../components/GuidedTour/Homepage';
+@@ -33,6 +33,7 @@ const LogoContainer = styled(Box)`
+ `;
+ 
+ export const HomePageCE = () => {
++  return <Redirect to={'/plugins/dashboard'} />;
+   // Temporary until we develop the menu API
+   const { collectionTypes, singleTypes, isLoading: isLoadingForModels } = useContentTypes();
+   const { guidedTourState, isGuidedTourVisible, isSkipped } = useGuidedTour();
+@@ -90,6 +91,8 @@ export const HomePageCE = () => {
+ };
+ 
+ function HomePageSwitch() {
++  return <Redirect to={'/plugins/dashboard'} />;
++
+   const HomePage = useEnterprise(
+     HomePageCE,
+     // eslint-disable-next-line import/no-cycle
+diff --git a/node_modules/@strapi/admin/admin/src/pages/MarketplacePage/.DS_Store b/node_modules/@strapi/admin/admin/src/pages/MarketplacePage/.DS_Store
+new file mode 100644
+index 0000000..92eadbc
+Binary files /dev/null and b/node_modules/@strapi/admin/admin/src/pages/MarketplacePage/.DS_Store differ
+diff --git a/node_modules/@strapi/admin/admin/src/pages/ProfilePage/.DS_Store b/node_modules/@strapi/admin/admin/src/pages/ProfilePage/.DS_Store
+new file mode 100644
+index 0000000..6336714
+Binary files /dev/null and b/node_modules/@strapi/admin/admin/src/pages/ProfilePage/.DS_Store differ
+diff --git a/node_modules/@strapi/admin/admin/src/pages/ProfilePage/components/.DS_Store b/node_modules/@strapi/admin/admin/src/pages/ProfilePage/components/.DS_Store
+new file mode 100644
+index 0000000..82b0d12
+Binary files /dev/null and b/node_modules/@strapi/admin/admin/src/pages/ProfilePage/components/.DS_Store differ
+diff --git a/node_modules/@strapi/admin/admin/src/pages/ProfilePage/components/Preferences/index.js b/node_modules/@strapi/admin/admin/src/pages/ProfilePage/components/Preferences/index.js
+index fc39f4f..30d3c10 100644
+--- a/node_modules/@strapi/admin/admin/src/pages/ProfilePage/components/Preferences/index.js
++++ b/node_modules/@strapi/admin/admin/src/pages/ProfilePage/components/Preferences/index.js
+@@ -56,7 +56,7 @@ const Preferences = ({ onChange, values, localeNames, allApplicationThemes }) =>
+           </Typography>
+         </Flex>
+         <Grid gap={5}>
+-          <GridItem s={12} col={6}>
++          {/* <GridItem s={12} col={6}>
+             <Select
+               label={formatMessage({
+                 id: 'Settings.profile.form.section.experience.interfaceLanguage',
+@@ -92,7 +92,7 @@ const Preferences = ({ onChange, values, localeNames, allApplicationThemes }) =>
+                 </Option>
+               ))}
+             </Select>
+-          </GridItem>
++          </GridItem> */}
+           <GridItem s={12} col={6}>
+             <Select
+               label={formatMessage({
+diff --git a/node_modules/@strapi/admin/admin/src/pages/SettingsPage/.DS_Store b/node_modules/@strapi/admin/admin/src/pages/SettingsPage/.DS_Store
+new file mode 100644
+index 0000000..66b2c40
+Binary files /dev/null and b/node_modules/@strapi/admin/admin/src/pages/SettingsPage/.DS_Store differ
+diff --git a/node_modules/@strapi/admin/admin/src/translations/en.json b/node_modules/@strapi/admin/admin/src/translations/en.json
+index b63fbaf..bc46fe8 100644
+--- a/node_modules/@strapi/admin/admin/src/translations/en.json
++++ b/node_modules/@strapi/admin/admin/src/translations/en.json
+@@ -8,7 +8,7 @@
+   "Auth.form.button.go-home": "GO BACK HOME",
+   "Auth.form.button.login": "Login",
+   "Auth.form.button.login.providers.error": "We cannot connect you through the selected provider.",
+-  "Auth.form.button.login.strapi": "Log in via Strapi",
++  "Auth.form.button.login.strapi": "Log in via GoSaudi",
+   "Auth.form.button.password-recovery": "Password Recovery",
+   "Auth.form.button.register": "Let's start",
+   "Auth.form.confirmPassword.label": "Confirm Password",
+@@ -44,8 +44,8 @@
+   "Auth.form.rememberMe.label": "Remember me",
+   "Auth.form.username.label": "Username",
+   "Auth.form.username.placeholder": "e.g. Kai_Doe",
+-  "Auth.form.welcome.subtitle": "Log in to your Strapi account",
+-  "Auth.form.welcome.title": "Welcome to Strapi!",
++  "Auth.form.welcome.subtitle": "Log in to your GoSaudi account",
++  "Auth.form.welcome.title": "Welcome to GoSaudi!",
+   "Auth.link.forgot-password": "Forgot your password?",
+   "Auth.link.ready": "Ready to sign in?",
+   "Auth.link.signin": "Sign in",
+@@ -201,7 +201,7 @@
+   "Settings.permissions.users.form.sso.description": "When enabled (ON), users can login via SSO",
+   "Settings.permissions.users.inactive": "Inactive",
+   "Settings.permissions.users.lastname": "Lastname",
+-  "Settings.permissions.users.listview.header.subtitle": "All the users who have access to the Strapi admin panel",
++  "Settings.permissions.users.listview.header.subtitle": "All the users who have access to the GoSaudi admin panel",
+   "Settings.permissions.users.roles": "Roles",
+   "Settings.permissions.users.strapi-author": "Author",
+   "Settings.permissions.users.strapi-editor": "Editor",
+@@ -457,7 +457,7 @@
+   "app.components.LeftMenu.general": "General",
+   "app.components.LeftMenu.logo.alt": "Application logo",
+   "app.components.LeftMenu.logout": "Logout",
+-  "app.components.LeftMenu.navbrand.title": "Strapi Dashboard",
++  "app.components.LeftMenu.navbrand.title": "GoSaudi Dashboard",
+   "app.components.LeftMenu.navbrand.workplace": "Workplace",
+   "app.components.LeftMenu.plugins": "Plugins",
+   "app.components.LeftMenuFooter.help": "Help",

@@ -1,0 +1,34 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 18
+    commands:
+      - apt-get update
+      - apt-get install -y jq
+      - wget https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.6.2.2472-linux.zip
+      - unzip sonar-scanner-cli-4.6.2.2472-linux.zip
+      - export PATH=$PATH:$(pwd)/sonar-scanner-4.6.2.2472-linux/bin
+
+  pre_build:
+    commands:
+      - ls $pwd
+
+  build:
+    commands:
+      - npm install
+      - npm run test
+
+  post_build:
+    commands:
+      - sonar-scanner -Dsonar.login=$SONAR_TOKEN -Dsonar.host.url=$SONAR_HOST_URL -Dsonar.projectKey=$ProjectKey -Dsonar.organization=$Organization -Dsonar.exclusions=node_modules/**/*
+      - sleep 7
+      - curl -v -u "$SONARQUBE_USERNAME:$SONARQUBE_PASSWORD" -o result.json "$SONAR_HOST_URL/api/qualitygates/project_status?projectKey=$ProjectKey"
+      - cat result.json
+      - status=$(jq -r '.projectStatus.status' result.json)
+      #- if [ "$status" != "OK" ]; then exit 1; fi
+      - echo Code scan completed on `date`
+
+artifacts:
+  files: '**/*'

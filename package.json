@@ -1,0 +1,41 @@
+{
+  "name": "go-saudi-api",
+  "private": true,
+  "version": "0.1.0",
+  "description": "A Strapi application",
+  "scripts": {
+    "develop": "strapi develop",
+    "start": "strapi start",
+    "build": "strapi build",
+    "strapi": "strapi",
+    "postinstall": "patch-package",
+    "sonar": "exit 0",
+    "test": "echo \"Error: no test specified\""
+  },
+  "dependencies": {
+    "@sendgrid/mail": "^7.7.0",
+    "@strapi-community/strapi-provider-upload-google-cloud-storage": "^4.10.5",
+    "@strapi/plugin-documentation": "^4.14.3",
+    "@strapi/plugin-i18n": "4.14.3",
+    "@strapi/plugin-users-permissions": "4.14.3",
+    "@strapi/provider-email-sendgrid": "^4.15.0",
+    "@strapi/strapi": "4.14.3",
+    "jsonwebtoken": "^9.0.2",
+    "mysql": "^2.18.1",
+    "mysql2": "^3.9.7",
+    "patch-package": "^8.0.0",
+    "sqlite3": "^5.1.6",
+    "strapi-plugin-populate-deep": "^3.0.0"
+  },
+  "author": {
+    "name": "A Strapi developer"
+  },
+  "strapi": {
+    "uuid": "81451d63-0d21-4e00-b96c-2651fd9e5090"
+  },
+  "engines": {
+    "node": ">=16.0.0 <=20.x.x",
+    "npm": ">=6.0.0"
+  },
+  "license": "MIT"
+}

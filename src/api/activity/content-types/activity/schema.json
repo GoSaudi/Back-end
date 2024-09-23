@@ -1,0 +1,92 @@
+{
+  "kind": "collectionType",
+  "collectionName": "activities",
+  "info": {
+    "singularName": "activity",
+    "pluralName": "activities",
+    "displayName": "Activity",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string",
+      "required": true
+    },
+    "about_activity": {
+      "type": "richtext",
+      "maxLength": 1000,
+      "required": true
+    },
+    "images": {
+      "type": "media",
+      "multiple": true,
+      "required": true,
+      "allowedTypes": [
+        "images"
+      ]
+    },
+    "duration": {
+      "type": "integer"
+    },
+    "bookings": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::booking.booking",
+      "mappedBy": "activity"
+    },
+    "vendor": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::vendor.vendor",
+      "inversedBy": "activities"
+    },
+    "activity_type": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::activity-type.activity-type"
+    },
+    "amount": {
+      "type": "float",
+      "required": true
+    },
+    "cost_category": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::activity-type.activity-type"
+    },
+    "date": {
+      "type": "date",
+      "required": true
+    },
+    "start_time": {
+      "type": "time"
+    },
+    "approval_reason": {
+      "type": "text"
+    },
+    "included_details": {
+      "type": "richtext"
+    },
+    "location": {
+      "type": "string"
+    },
+    "totalTickets": {
+      "type": "integer",
+      "required": true
+    },
+    "approved": {
+      "type": "enumeration",
+      "enum": [
+        "Approved",
+        "Rejected"
+      ]
+    },
+    "totalBooked": {
+      "type": "integer"
+    }
+  }
+}

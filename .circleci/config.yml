@@ -1,0 +1,131 @@
+version: 2.1
+
+orbs:
+  node: circleci/node@5.0.2
+  slack: circleci/slack@4.4.4
+jobs:
+  sonarqube_analysis:
+    docker:
+      - image: cimg/node:20.11.0
+    steps:
+      - checkout
+      - run:
+          name: Install Sonar Scanner
+          command: |
+            wget https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.6.2.2472-linux.zip
+            unzip sonar-scanner-cli-4.6.2.2472-linux.zip -d /home/circleci
+            sudo ln -s /home/circleci/sonar-scanner-4.6.2.2472-linux/bin/sonar-scanner /usr/local/bin/sonar-scanner
+      - run:
+          name: SonarQube Analysis
+          command: |
+            sonar-scanner -Dsonar.login=$SONAR_TOKEN -Dsonar.host.url=$SONAR_HOST_URL -Dsonar.projectKey=$ProjectKey -Dsonar.organization=$Organization
+  build_and_push_to_ecr:
+    docker:
+      - image: cimg/node:20.11.0
+    steps:
+      - checkout
+      - setup_remote_docker:
+          docker_layer_caching: true
+      - restore_cache:
+          keys:
+            - v1-{{ .Branch }}-deps
+          paths:
+            - node_modules
+      - run:
+          name: Install Dependencies
+          command: |
+            npm install
+            npm run build
+      - save_cache:
+          key: v1-{{ .Branch }}-deps
+          paths:
+            - node_modules
+      - run:
+          name: Install AWS CLI
+          command: |
+            sudo apt-get update
+            sudo apt-get install -y awscli
+      - run:
+          name: Configure AWS Credentials
+          command: |
+            aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
+            aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
+            aws configure set default.region $AWS_DEFAULT_REGION
+      - run:
+          name: Authenticate Docker to ECR
+          command: |
+            aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
+      - run:
+          name: Fetch Env from S3
+          command: |
+            aws s3 cp s3://proj-info/go-saudi/be-env .env
+            #cat .env
+      - run:
+          name: Build and Push Docker Image to ECR
+          command: |
+            docker build -t go-saudi-be:$CIRCLE_BUILD_NUM --build-arg ENV_FILE=.env .
+            docker tag go-saudi-be:$CIRCLE_BUILD_NUM $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/go-saudi-be:$CIRCLE_BUILD_NUM
+            docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/go-saudi-be:$CIRCLE_BUILD_NUM
+      - run:
+          name: Clean up temporary files
+          command: |
+            rm .env
+      - slack/notify:
+          event: fail
+          mentions: "@channel"
+          template: basic_fail_1
+          channel: $SLACK_DEFAULT_CHANNEL 
+          
+  deploy_to_ec2_and_notify:
+    docker:
+      - image: cimg/node:20.11.0
+    steps:
+      - checkout
+      - add_ssh_keys:
+          fingerprints:
+            - "SHA256:w9zb5I8vZ7LA+OEbLXC3c55Tw9uweOgvOpYKi6z1Wnw"   
+      - run:
+          name: Install sshpass and AWS CLI
+          command: |
+            sudo apt-get update && sudo apt-get install -y sshpass
+            sudo apt-get install -y awscli
+      - run:
+          name: Save private key to file
+          command: echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa
+      - run:
+          name: Execute deploy.sh on EC2
+          command: |
+            sshpass -p 'ubuntu' ssh -vvv -o StrictHostKeyChecking=no -i /home/circleci/.ssh/id_rsa ubuntu@$HOST_ID "cd /home/ubuntu/go-saudi-be && git pull origin develop && aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com && docker login -u AWS -p \$(aws ecr get-login-password --region $AWS_DEFAULT_REGION) $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com && docker-compose down && docker system prune -a -f && docker pull $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/go-saudi-be:$((CIRCLE_BUILD_NUM - 1)) && docker tag $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/go-saudi-be:$((CIRCLE_BUILD_NUM - 1)) $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/go-saudi-be:latest && docker-compose up -d --build && sudo systemctl restart nginx"
+      - slack/notify:
+          event: pass
+          template: success_tagged_deploy_1
+          channel: $SLACK_DEFAULT_CHANNEL
+      - slack/notify:
+          event: fail
+          mentions: "@channel"
+          template: basic_fail_1
+          channel: $SLACK_DEFAULT_CHANNEL
+
+workflows:
+  version: 2
+  build_and_deploy:
+    jobs:
+      - sonarqube_analysis:
+          filters:
+            branches:
+              only:
+                - develop
+      - build_and_push_to_ecr:
+          requires:
+            - sonarqube_analysis
+          filters:
+            branches:
+              only:
+                - develop
+      - deploy_to_ec2_and_notify:
+          requires:
+            - build_and_push_to_ecr
+          filters:
+            branches:
+              only:
+                - develop
