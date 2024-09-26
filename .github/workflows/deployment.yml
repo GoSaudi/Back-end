@@ -1,0 +1,83 @@
+name: Build and Push Docker Image to GCR
+
+on:
+  push:
+    branches:
+      - feature/pipeline  # Adjust to your branch name
+
+jobs:
+  build-push-gcr:
+    name: Build and Push to GCP
+    runs-on: ubuntu-latest
+
+    env:
+      TAG: ${{ github.sha }}  # Use the commit SHA as the tag
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Authenticate to Google Cloud
+        uses: 'google-github-actions/auth@v1'
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+          install_components: 'gcloud'
+
+      - name: Authenticate Docker with GCR
+        run: |
+          gcloud auth configure-docker me-central1-docker.pkg.dev --quiet
+
+      - name: Build and push Docker image
+        run: |
+          docker build -t ${{ secrets.GAR_LOCATION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.REPO_NAME }}/${{ secrets.IMAGE_NAME }}:1 .
+          docker push ${{ secrets.GAR_LOCATION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.REPO_NAME }}/${{ secrets.IMAGE_NAME }}:1
+
+  deploy-gce:  # Job for deploying to Google Compute Engine
+    name: Deploy to Google Compute Engine
+    runs-on: ubuntu-latest  # Defines the environment to run this job
+    needs: build-push-gcr  # Ensure this job runs after build-push-gcr job
+
+    steps:
+      # Authenticate using the service account key
+      - id: 'auth'
+        uses: 'google-github-actions/auth@v1'
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+          install_components: 'gcloud'
+
+      - name: Get GitHub Runner Public IP
+        id: get_ip
+        run: |
+          export RUNNER_IP=$(curl -s ifconfig.me)
+          echo "RUNNER_IP=$RUNNER_IP" >> $GITHUB_ENV
+
+      - name: Update Firewall Rule to Allow SSH from GitHub Runner
+        run: |
+          gcloud compute firewall-rules update allow-specific-ssh \
+            --project=${{ secrets.GCP_PROJECT_ID }} \
+            --allow=tcp:22 \
+            --source-ranges=${{ env.RUNNER_IP }}/32 \
+            --quiet
+
+      # Deploy to Google Compute Engine
+      - name: Deploy to Google Compute Engine
+        run: |
+          gcloud compute ssh devops@go-saudi-staging-new --zone=me-central1-a --command "cd /home/devops/Go-saudi/Back-end && sh deploy.sh"      
+
+      # # Optionally, remove the IP from the firewall rule to maintain security
+      # - name: Remove GitHub Runner IP from Firewall Rule
+      #   run: |
+      #     gcloud compute firewall-rules update allow-specific-ssh \
+      #       --project=${{ secrets.GCP_PROJECT_ID }} \
+      #       --allow=tcp:22 \
+      #       --source-ranges=0.0.0.0/0 --quiet  
