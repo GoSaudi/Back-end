@@ -8,3 +8,5 @@ docker system prune -a -f
 docker-compose up -d --build
 clear
 docker ps
+docker logs go-saudi-be
+docker logs mysql
