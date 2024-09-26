@@ -35,7 +35,8 @@ jobs:
       - name: Build and push Docker image
         run: |
           docker build -t ${{ secrets.GAR_LOCATION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.REPO_NAME }}/${{ secrets.IMAGE_NAME }}:1 .
-          docker push ${{ secrets.GAR_LOCATION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.REPO_NAME }}/${{ secrets.IMAGE_NAME }}:1
+          docker push me-central1-docker.pkg.dev/heroic-footing-422415-n9/go-saudi-be-staging/go-saudi-be-staging:1
+
 
   deploy-gce:  # Job for deploying to Google Compute Engine
     name: Deploy to Google Compute Engine
