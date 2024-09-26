@@ -1,8 +1,9 @@
 version: '3.7'
+
 services:
   go-saudi-app:
-      # Uncomment the next line if you want to use a specific image
-      image: me-central1-docker.pkg.dev/heroic-footing-422415-n9/go-saudi-be-staging/go-saudi-be-staging:1
+    # Uncomment the next line if you want to use a specific image
+    image: me-central1-docker.pkg.dev/heroic-footing-422415-n9/go-saudi-be-staging/go-saudi-be-staging:1
     container_name: go-saudi-be
     ports:
       - "1337:1337"
@@ -23,6 +24,7 @@ services:
         reservations:
           cpus: '0.5'
           memory: '2G'
+
   mysql:
     image: mysql:8.0
     container_name: mysql
