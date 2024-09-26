@@ -1,5 +1,4 @@
 version: '3.7'
-
 services:
   go-saudi-app:
       # Uncomment the next line if you want to use a specific image
