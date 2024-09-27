@@ -2,8 +2,7 @@ version: '3.7'
 
 services:
   go-saudi-app:
-    # Uncomment the next line if you want to use a specific image
-    image: me-central1-docker.pkg.dev/heroic-footing-422415-n9/go-saudi-be-staging/go-saudi-be-staging:1
+    image: me-central1-docker.pkg.dev/heroic-footing-422415-n9/go-saudi-be-staging/go-saudi-be-staging:latest
     container_name: go-saudi-be
     ports:
       - "1337:1337"
@@ -24,6 +23,16 @@ services:
         reservations:
           cpus: '0.5'
           memory: '2G'
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:1337/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "50"
 
   mysql:
     image: mysql:8.0
@@ -53,6 +62,11 @@ services:
         reservations:
           cpus: '0.25'     # MySQL reserved 0.25 vCPUs
           memory: '1G'     # MySQL reserved 1 GB memory
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "50"
 
 networks:
   go-saudi-network:
