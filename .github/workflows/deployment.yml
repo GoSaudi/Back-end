@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      TAG: ${{ github.sha }}  # Use the commit SHA as the tag
+      TAG: ${{ github.run_number }}  # Use the commit SHA as the tag
 
     steps:
       - name: Checkout code
@@ -22,11 +22,11 @@ jobs:
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
 
-      - name: Set up Google Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
-        with:
-          project_id: ${{ secrets.GCP_PROJECT_ID }}
-          install_components: 'gcloud'
+      # - name: Set up Google Cloud SDK
+      #   uses: google-github-actions/setup-gcloud@v2
+      #   with:
+      #     project_id: ${{ secrets.GCP_PROJECT_ID }}
+      #     install_components: 'gcloud'
 
       - name: Authenticate Docker with GCR
         run: |
@@ -34,9 +34,8 @@ jobs:
 
       - name: Build and push Docker image
         run: |
-          docker build -t me-central1-docker.pkg.dev/heroic-footing-422415-n9/go-saudi-be-staging/go-saudi-be-staging:1 .
-          docker push me-central1-docker.pkg.dev/heroic-footing-422415-n9/go-saudi-be-staging/go-saudi-be-staging:1
-
+          docker build -t ${{ secrets.GAR_LOCATION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.REPO_NAME }}/${{ secrets.IMAGE_NAME }}:${{ env.TAG }} .
+          docker push ${{ secrets.GAR_LOCATION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.REPO_NAME }}/${{ secrets.IMAGE_NAME }}:${{ env.TAG }}
 
   deploy-gce:  # Job for deploying to Google Compute Engine
     name: Deploy to Google Compute Engine
@@ -44,17 +43,20 @@ jobs:
     needs: build-push-gcr  # Ensure this job runs after build-push-gcr job
 
     steps:
-      # Authenticate using the service account key
+
+      - name: Checkout code
+        uses: actions/checkout@v2
+    
       - id: 'auth'
         uses: 'google-github-actions/auth@v1'
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
 
-      - name: Set up Google Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
-        with:
-          project_id: ${{ secrets.GCP_PROJECT_ID }}
-          install_components: 'gcloud'
+      # - name: Set up Google Cloud SDK
+      #   uses: google-github-actions/setup-gcloud@v2
+      #   with:
+      #     project_id: ${{ secrets.GCP_PROJECT_ID }}
+      #     install_components: 'gcloud'  
 
       - name: Get GitHub Runner Public IP
         id: get_ip
@@ -70,15 +72,35 @@ jobs:
             --source-ranges=${{ env.RUNNER_IP }}/32 \
             --quiet
 
-      # Deploy to Google Compute Engine
+      - name: List files
+        run: |
+          ls -la
+      
+      - name: Show docker-compose.yml before replacing tag
+        run: cat ./docker-compose.yml
+
+      - name: Replace TAG in docker-compose.yml
+        run: |
+          # Check if TAG is set, if not set it manually here
+          if [ -z "${{ env.TAG }}" ]; then
+            echo "TAG is not set, setting it manually."
+            TAG="${{ github.run_number }}"
+          fi
+
+          # Replace `latest` with the actual tag value
+          sed -i "s/latest/${TAG}/g" ./docker-compose.yml  
+
+      - name: Show docker-compose.yml after replacing tag
+        run: cat ./docker-compose.yml
+
+      - name: Copy docker-compose.yml to GCE
+        run: |
+          gcloud compute scp ./docker-compose.yml devops@go-saudi-staging-new:/home/devops/Go-saudi/Back-end/ --zone=me-central1-a
+
       - name: Deploy to Google Compute Engine
         run: |
-          gcloud compute ssh devops@go-saudi-staging-new --zone=me-central1-a --command "cd /home/devops/Go-saudi/Back-end && sh deploy.sh"      
-
-      # # Optionally, remove the IP from the firewall rule to maintain security
-      # - name: Remove GitHub Runner IP from Firewall Rule
-      #   run: |
-      #     gcloud compute firewall-rules update allow-specific-ssh \
-      #       --project=${{ secrets.GCP_PROJECT_ID }} \
-      #       --allow=tcp:22 \
-      #       --source-ranges=0.0.0.0/0 --quiet  
+          gcloud compute ssh devops@go-saudi-staging-new --zone=me-central1-a --command "
+            cd /home/devops/Go-saudi/Back-end && \
+            cat docker-compose.yml && \
+            sh deploy.sh
+          "
