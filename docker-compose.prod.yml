@@ -2,24 +2,17 @@ version: '3.7'
 
 services:
   go-saudi-app:
-    build:
-      context: .
-      # Uncomment the next line if you want to use a specific image
-      #image: me-central1-docker.pkg.dev/heroic-footing-422415-n9/go-saudi-be/go-saudi-be:latest
+    image: me-central1-docker.pkg.dev/heroic-footing-422415-n9/go-saudi-be/go-saudi-be:latest
     container_name: go-saudi-be
     ports:
       - "1337:1337"
     env_file:
       - .env
-    environment:
-      DATABASE_HOST: ${DATABASE_HOST}
-      DATABASE_PORT: ${DATABASE_PORT}
-      DATABASE_USER: ${DATABASE_USER}
-      DATABASE_PASSWORD: ${DATABASE_PASSWORD}
-      DATABASE_NAME: ${DATABASE_NAME}
     volumes:
       - /home/ubuntu/backup:/usr/src/app/public/uploads
     restart: always
+    networks:
+      - go-saudi-network
     deploy:
       resources:
         limits:
@@ -28,6 +21,16 @@ services:
         reservations:
           cpus: '0.75'
           memory: '3G'
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:1337/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "50"
 
 networks:
   go-saudi-network:
