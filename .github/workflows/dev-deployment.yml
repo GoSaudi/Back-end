@@ -3,7 +3,7 @@ name: Build and Push Docker Image to GCR
 on:
   push:
     branches:
-      - feature/pipeline  # Adjust to your branch name
+      - staging  # Adjust to your branch name
 
 jobs:
   build-push-gcr:
@@ -21,12 +21,6 @@ jobs:
         uses: 'google-github-actions/auth@v1'
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
-
-      # - name: Set up Google Cloud SDK
-      #   uses: google-github-actions/setup-gcloud@v2
-      #   with:
-      #     project_id: ${{ secrets.GCP_PROJECT_ID }}
-      #     install_components: 'gcloud'
 
       - name: Authenticate Docker with GCR
         run: |
@@ -70,10 +64,10 @@ jobs:
         run: |
           ls -la
       
-      - name: Show docker-compose.yml before replacing tag
-        run: cat ./docker-compose.yml
+      - name: Show docker-compose.dev.yml before replacing tag
+        run: cat ./docker-compose.dev.yml
 
-      - name: Replace TAG in docker-compose.yml
+      - name: Replace TAG in docker-compose.dev.yml
         run: |
           # Check if TAG is set, if not set it manually here
           if [ -z "${{ env.TAG }}" ]; then
@@ -82,19 +76,19 @@ jobs:
           fi
 
           # Replace `latest` with the actual tag value
-          sed -i "s/latest/${TAG}/g" ./docker-compose.yml  
+          sed -i "s/latest/${TAG}/g" ./docker-compose.dev.yml  
 
-      - name: Show docker-compose.yml after replacing tag
-        run: cat ./docker-compose.yml
+      - name: Show docker-compose.dev.yml after replacing tag
+        run: cat ./docker-compose.dev.yml
 
       - name: Copy docker-compose.yml to GCE
         run: |
-          gcloud compute scp ./docker-compose.yml devops@go-saudi-staging-new:/home/devops/Go-saudi/Back-end/ --zone=me-central1-a
+          gcloud compute scp ./docker-compose.dev.yml devops@go-saudi-staging-new:/home/devops/Go-saudi/Back-end/ --zone=me-central1-a
 
       - name: Deploy to Google Compute Engine
         run: |
           gcloud compute ssh devops@go-saudi-staging-new --zone=me-central1-a --command "
             cd /home/devops/Go-saudi/Back-end && \
-            cat docker-compose.yml && \
-            sh deploy.sh
+            cat docker-compose.dev.yml && \
+            sh deploy-dev.sh
           "
