@@ -29,9 +29,7 @@
       "mappedBy": "customer"
     },
     "email": {
-      "type": "email",
-      "required": true,
-      "unique": true
+      "type": "email"
     },
     "dob": {
       "type": "date"
@@ -39,7 +37,6 @@
     "phone": {
       "type": "string",
       "required": true,
-      "private": true,
       "unique": true
     },
     "address": {

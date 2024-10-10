@@ -1,0 +1,27 @@
+{
+    "collectionName": "otps",
+    "info": {
+      "singularName": "otp", 
+      "pluralName": "otps",
+      "displayName": "OTP",
+      "description": "Stores OTP codes for phone numbers"
+    },
+    "options": {
+      "draftAndPublish": false
+    },
+    "attributes": {
+      "otpCode": {
+        "type": "integer",
+        "required": true
+      },
+      "phoneNumber": {
+        "type": "string",
+        "required": true
+      },
+      "expiresAt": {
+        "type": "datetime",
+        "required": true
+      }
+    }
+  }
+  

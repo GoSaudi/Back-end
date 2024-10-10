@@ -8,15 +8,6 @@ export default {
         policies: [],
         middlewares: [],
       },
-    },
-    {
-      method: "POST",
-      path: "/customer-onboard/confirm",
-      handler: "customer-onboard.confirmUser",
-      config: {
-        policies: [],
-        middlewares: [],
-      },
-    },
+    }
   ],
 };

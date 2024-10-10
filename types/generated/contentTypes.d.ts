@@ -873,12 +873,9 @@ export interface ApiCustomerCustomer extends Schema.CollectionType {
       'oneToMany',
       'api::booking.booking'
     >;
-    email: Attribute.Email & Attribute.Required & Attribute.Unique;
+    email: Attribute.Email;
     dob: Attribute.Date;
-    phone: Attribute.String &
-      Attribute.Required &
-      Attribute.Private &
-      Attribute.Unique;
+    phone: Attribute.String & Attribute.Required & Attribute.Unique;
     address: Attribute.Text;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
@@ -893,6 +890,30 @@ export interface ApiCustomerCustomer extends Schema.CollectionType {
       'oneToOne',
       'admin::user'
     > &
+      Attribute.Private;
+  };
+}
+
+export interface ApiOtpOtp extends Schema.CollectionType {
+  collectionName: 'otps';
+  info: {
+    singularName: 'otp';
+    pluralName: 'otps';
+    displayName: 'OTP';
+    description: 'Stores OTP codes for phone numbers';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    otpCode: Attribute.Integer & Attribute.Required;
+    phoneNumber: Attribute.String & Attribute.Required;
+    expiresAt: Attribute.DateTime & Attribute.Required;
+    createdAt: Attribute.DateTime;
+    updatedAt: Attribute.DateTime;
+    createdBy: Attribute.Relation<'api::otp.otp', 'oneToOne', 'admin::user'> &
+      Attribute.Private;
+    updatedBy: Attribute.Relation<'api::otp.otp', 'oneToOne', 'admin::user'> &
       Attribute.Private;
   };
 }
@@ -1125,6 +1146,7 @@ declare module '@strapi/types' {
       'api::activity-type.activity-type': ApiActivityTypeActivityType;
       'api::booking.booking': ApiBookingBooking;
       'api::customer.customer': ApiCustomerCustomer;
+      'api::otp.otp': ApiOtpOtp;
       'api::transaction.transaction': ApiTransactionTransaction;
       'api::vendor.vendor': ApiVendorVendor;
     }
